@@ -1,0 +1,7 @@
+.vscode/
+*.tsv
+*.csv
+NL27K-N3/
+NL27K-tasks/
+*.txt
+
