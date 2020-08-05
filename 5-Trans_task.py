@@ -8,6 +8,8 @@ from collections import defaultdict
 in_path = './NL27K_with_neg_res/'
 out_path = './NL27K-tasks/'
 
+log_file = None
+
 low_freq = 50
 up_freq = 500
 
@@ -234,15 +236,16 @@ def create_tasks(file_id, out_path):
     path_graph_id, path_graph_str
     '''
     print('--------------Data: %s ------------' % out_path)
+    print('--------------Data: %s ------------' % out_path, file = log_file, flush = True)
     rel2triples_str = rel_2_triple('str', file_id)
     rel2triples_id = rel_2_triple('id', file_id)
 
     def write_tasks(rels_id, desc = ''):
         # train tasks
-        cnt = 0
+        pos_cnt = 0
+        all_cnt = 0
         tasks_str = {}
         neg_triples_all = []
-        neg_cnt = 0
         for rel_id in rels_id:
             pos_triples_str = rel2triples_str[id2rel[rel_id]] # 取出正例
             # ---------- 手工构造负例 ----------
@@ -257,32 +260,43 @@ def create_tasks(file_id, out_path):
                 neg_num = len(pos_triples_str) * 0.0
             else:
                 print('[WARN] something error')
+                print('[WARN] something error', file = log_file, flush = True)
             neg_num = int(neg_num)
             neg_triples_str = generate_neg_examples(pos_triples_str, neg_num)
             #----------------------------------
             if desc == 'train':
                 neg_triples_all = neg_triples_all + neg_triples_str
                 tasks_str[id2rel[rel_id]] = pos_triples_str + neg_triples_str # 仅在训练集中加入负例
-                neg_cnt += neg_num
             else:
                 tasks_str[id2rel[rel_id]] = pos_triples_str
-            cnt += len(rel2triples_id[rel_id])
-        print(desc, 'task num', len(rels_id), cnt)
+            pos_cnt += len(rel2triples_id[rel_id])
+            all_cnt += len(tasks_str[id2rel[rel_id]])
+        # print(desc, 'task num', len(rels_id), cnt)
 
         # write
-        print('[INFO] manu neg num', len(neg_triples_all), neg_cnt)
-        write_triples(out_path + desc + '_neg_triples.tsv', neg_triples_all)
+        print('[INFO] %s relation type num %d' % (desc, len(rels_id)))
+        print('[INFO] %s pos triple num %d' % (desc, pos_cnt))
+        print('[INFO] %s manu add neg triple num %d\n' % (desc, len(neg_triples_all)))
+        print('[INFO] %s relation type num %d' % (desc, len(rels_id)), file = log_file, flush = True)
+        print('[INFO] %s pos triple num %d' % (desc, pos_cnt), file = log_file, flush = True)
+        print('[INFO] %s manu add neg triple num %d\n' % (desc, len(neg_triples_all)), file = log_file, flush = True)
+        # write_triples(out_path + desc + '_neg_triples.tsv', neg_triples_all)
         with open(out_path + desc + '_tasks.json', 'w') as f:
             json.dump(tasks_str, f)
         f.close()
 
-    write_tasks(rels_id_train, desc = 'train')
-    write_tasks(rels_id_val, desc = 'dev')
-    write_tasks(rels_id_test, desc = 'test')
+        return pos_cnt
 
+    task_triple_cnt = 0
+    task_triple_cnt += write_tasks(rels_id_train, desc = 'train')
+    task_triple_cnt += write_tasks(rels_id_val, desc = 'dev')
+    task_triple_cnt += write_tasks(rels_id_test, desc = 'test')
+    print('[INFO] train-dev-test tasks pos triple num: %s' % task_triple_cnt)
+    print('[INFO] train-dev-test tasks pos triple num: %s' % task_triple_cnt, file = log_file, flush = True)
 
     triples_id_all = read_triples_id(file_id)
     print('[INFO]',file_id, 'all triples num:', len(triples_id_all))
+    print('[INFO]',file_id, 'all triples num:', len(triples_id_all), file = log_file, flush = True)
     triples_background_id = []
     triples_background_str = []
     for index, triple_id in enumerate(triples_id_all):
@@ -291,44 +305,21 @@ def create_tasks(file_id, out_path):
             triples_background_id.append((h, r, t, s))
             triples_background_str.append((id2ent[h], id2rel[r], id2ent[t], s))
     
-    print('background triples', len(triples_background_id))
+    info_str = '[WARN] path-graph num not match ！！！'
+    if len(triples_id_all) - task_triple_cnt ==  len(triples_background_id):
+        info_str = '[INFO] path-graph match good~'
+    print('[INFO] path-graph triples num: %d (%s)' % (len(triples_background_id), info_str))
+    print('[INFO] path-graph triples num: %d (%s)' % (len(triples_background_id), info_str), file = log_file, flush = True)
+    # print('[INFO] path-graph triples num: %d (%s)', len(triples_background_id), file = log_file, flush = True)
+
 
     write_triples(out_path + 'path_graph', triples_background_str)
-
-
-
-    # # 构造graph_path，这里明确了，graph path是background knowledge，是不包含train、valid、test task中的triples的,其实这里大可不必搞的这么复杂，只要不是关于train、test、dev的triple都要放进
-    # triples_used = set()
-    # for rel_id in rels_id_train:
-    #     triples_used = triples_used | triples_2_str_set(rel2triples_id[rel_id])
-    # for rel_id in rels_id_val:
-    #     triples_used = triples_used | triples_2_str_set(rel2triples_id[rel_id])
-    # for rel_id in rels_id_test:
-    #     triples_used = triples_used | triples_2_str_set(rel2triples_id[rel_id])  
-
-    # print('task used triples', len(triples_used))
-
-    # triples_id_all = read_triples_id(file_id)
-    # print('all triples', len(triples_id_all))
-    # triples_background_id = []
-    # triples_background_str = []
-    # for index, triple_id in enumerate(triples_id_all):
-    #     (h, r, t, s) = triple_id
-    #     tmp_str = h + ',' + r + ',' + t
-    #     if tmp_str not in triples_used:
-    #         triples_background_id.append((h, r, t, s))
-    #         triples_background_str.append((id2ent[h], id2rel[r], id2ent[t], s))
-    
-    # print('background triples', len(triples_background_id))
-
-    # write_triples(out_path + 'path_graph', triples_background_str)
-
-
 
 
 if __name__ == "__main__":
     in_path = './NL27K_with_neg_res/'
     out_path = './NL27K-tasks/NL27K-N0/'
+    log_file = open('./NL27K-tasks/create_data.log', 'w')
 
     ent2id, id2ent = read_symbol2id(in_path + 'entity2id.tsv')
     rel2id, id2rel = read_symbol2id(in_path + 'relation2id.tsv')
