@@ -233,46 +233,44 @@ def create_tasks(file_id, out_path):
     train_tasks_id.json, train_tasks_str.json(val test同样)
     path_graph_id, path_graph_str
     '''
-    print('-------------- %s ------------' % file_id)
+    print('--------------Data: %s ------------' % out_path)
     rel2triples_str = rel_2_triple('str', file_id)
     rel2triples_id = rel_2_triple('id', file_id)
 
     def write_tasks(rels_id, desc = ''):
         # train tasks
         cnt = 0
-        tasks_id = {}
         tasks_str = {}
         neg_triples_all = []
         neg_cnt = 0
         for rel_id in rels_id:
-            tmp_triples_str = rel2triples_str[id2rel[rel_id]] # 取出正例
-            # ---------- 构造负例 ----------
+            pos_triples_str = rel2triples_str[id2rel[rel_id]] # 取出正例
+            # ---------- 手工构造负例 ----------
             neg_num = -1
             if 'N0' in out_path:
                 neg_num = 0
             elif 'N1' in out_path:
-                neg_num = len(tmp_triples_str) * 0.0
+                neg_num = len(pos_triples_str) * 0.0
             elif 'N2' in out_path:
-                neg_num = len(tmp_triples_str) * 0.0
+                neg_num = len(pos_triples_str) * 0.0
             elif 'N3' in out_path:
-                neg_num = len(tmp_triples_str) * 0.0
+                neg_num = len(pos_triples_str) * 0.0
             else:
                 print('[WARN] something error')
             neg_num = int(neg_num)
-            # neg_num = 0
-            neg_triples_str = generate_neg_examples(tmp_triples_str, neg_num)
+            neg_triples_str = generate_neg_examples(pos_triples_str, neg_num)
+            #----------------------------------
             if desc == 'train':
-                # 仅在训练集中加入负例
                 neg_triples_all = neg_triples_all + neg_triples_str
-                tasks_str[id2rel[rel_id]] = tmp_triples_str + neg_triples_str
+                tasks_str[id2rel[rel_id]] = pos_triples_str + neg_triples_str # 仅在训练集中加入负例
                 neg_cnt += neg_num
             else:
-                tasks_str[id2rel[rel_id]] = tmp_triples_str
+                tasks_str[id2rel[rel_id]] = pos_triples_str
             cnt += len(rel2triples_id[rel_id])
         print(desc, 'task num', len(rels_id), cnt)
 
         # write
-        print('neg num', len(neg_triples_all), neg_cnt)
+        print('[INFO] manu neg num', len(neg_triples_all), neg_cnt)
         write_triples(out_path + desc + '_neg_triples.tsv', neg_triples_all)
         with open(out_path + desc + '_tasks.json', 'w') as f:
             json.dump(tasks_str, f)
@@ -282,33 +280,48 @@ def create_tasks(file_id, out_path):
     write_tasks(rels_id_val, desc = 'dev')
     write_tasks(rels_id_test, desc = 'test')
 
-    # 构造graph_path，这里明确了，graph path是background knowledge，是不包含train、valid、test task中的triples的
-    triples_used = set()
-    for rel_id in rels_id_train:
-        triples_used = triples_used | triples_2_str_set(rel2triples_id[rel_id])
-    for rel_id in rels_id_val:
-        triples_used = triples_used | triples_2_str_set(rel2triples_id[rel_id])
-    for rel_id in rels_id_test:
-        triples_used = triples_used | triples_2_str_set(rel2triples_id[rel_id])  
-
-    print('task used triples', len(triples_used))
 
     triples_id_all = read_triples_id(file_id)
-    print('all triples', len(triples_id_all))
+    print('[INFO]',file_id, 'all triples num:', len(triples_id_all))
     triples_background_id = []
     triples_background_str = []
     for index, triple_id in enumerate(triples_id_all):
-        # if index % 10000 == 0:
-        #     print(float(index / len(triples_id_all)))
         (h, r, t, s) = triple_id
-        tmp_str = h + ',' + r + ',' + t
-        if tmp_str not in triples_used:
+        if r not in rels_id_train and r not in rels_id_val and r not in rels_id_test:
             triples_background_id.append((h, r, t, s))
             triples_background_str.append((id2ent[h], id2rel[r], id2ent[t], s))
     
     print('background triples', len(triples_background_id))
 
     write_triples(out_path + 'path_graph', triples_background_str)
+
+
+
+    # # 构造graph_path，这里明确了，graph path是background knowledge，是不包含train、valid、test task中的triples的,其实这里大可不必搞的这么复杂，只要不是关于train、test、dev的triple都要放进
+    # triples_used = set()
+    # for rel_id in rels_id_train:
+    #     triples_used = triples_used | triples_2_str_set(rel2triples_id[rel_id])
+    # for rel_id in rels_id_val:
+    #     triples_used = triples_used | triples_2_str_set(rel2triples_id[rel_id])
+    # for rel_id in rels_id_test:
+    #     triples_used = triples_used | triples_2_str_set(rel2triples_id[rel_id])  
+
+    # print('task used triples', len(triples_used))
+
+    # triples_id_all = read_triples_id(file_id)
+    # print('all triples', len(triples_id_all))
+    # triples_background_id = []
+    # triples_background_str = []
+    # for index, triple_id in enumerate(triples_id_all):
+    #     (h, r, t, s) = triple_id
+    #     tmp_str = h + ',' + r + ',' + t
+    #     if tmp_str not in triples_used:
+    #         triples_background_id.append((h, r, t, s))
+    #         triples_background_str.append((id2ent[h], id2rel[r], id2ent[t], s))
+    
+    # print('background triples', len(triples_background_id))
+
+    # write_triples(out_path + 'path_graph', triples_background_str)
 
 
 
