@@ -1,7 +1,12 @@
+'''
+Step 2: Calculate the PCRA confidence of each triples
+'''
 import os,sys
 import math
 import random
 import time 
+
+in_path = './2-data_with_neg/'
 
 # 构建全局容器
 ok = {} # ok['h'+'t'][r] = 1 
@@ -223,10 +228,9 @@ def work(in_file, out_file):
 
 if __name__ == '__main__':
     print('start')
-    data_path = './NL27K_with_neg/'
-    load_rel2id(data_path + 'relation2id.tsv')
-    load_triples(data_path + 'pos_with_neg.tsv')
+    load_rel2id(in_path + 'relation_id.tsv')
+    load_triples(in_path + 'pos_with_neg.tsv')
     print('[INFO] 数据载入完成')
     generate_path()
-    proir_path_confidence(data_path + "pos_with_neg.tsv", data_path + "pos_with_neg_PP_conf.txt") # file_confidence
-    work(data_path + "pos_with_neg.tsv", data_path + 'pos_with_neg_pra.txt') # file_pra.txt
+    proir_path_confidence(in_path + "pos_with_neg.tsv", in_path + "pos_with_neg_PP_conf.txt") # file_confidence
+    work(in_path + "pos_with_neg.tsv", in_path + 'pos_with_neg_pra.txt') # file_pra.txt

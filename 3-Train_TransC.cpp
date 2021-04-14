@@ -12,11 +12,16 @@
 using namespace std;
 
 
+/*
+in_path = "./2-data_with_neg/"
+out_path = "./3-data_with_neg_res/"
+*/
+
 #define pi 3.1415926535897932384626433832795
 
 bool L1_flag=1;
 
-int nepoch = 100;
+int nepoch = 5;
 string transE_version = "bern";
 double conf_step = 0.0001;		//rate_confidence
 
@@ -267,10 +272,10 @@ private:
 				entity_vec = entity_tmp;
 			}
 			cout<<"epoch:"<<epoch<<' '<<res<<endl;
-			FILE* f4 = fopen("./NL27K_with_neg_res/train_LT_conf.txt","w");
-			FILE* f5 = fopen("./NL27K_with_neg_res/train_AP_conf.txt","w");
-			FILE* f6 = fopen("./NL27K_with_neg_res/train_PP_conf.txt","w");
-			FILE* f7 = fopen("./NL27K_with_neg_res/train_id.tsv","w");
+			FILE* f4 = fopen("./3-data_with_neg_res/train_LT_conf.txt","w");
+			FILE* f5 = fopen("./3-data_with_neg_res/train_AP_conf.txt","w");
+			FILE* f6 = fopen("./3-data_with_neg_res/train_PP_conf.txt","w");
+			FILE* f7 = fopen("./3-data_with_neg_res/train_id.tsv","w");
 			float tmp_confidence;
 			for (int i=0; i<fb_h.size(); i++)		//output rate_confidence
 			{
@@ -369,10 +374,12 @@ private:
 Train train;
 void prepare()
 {
-    FILE* f1 = fopen("./NL27K_with_neg/entity2id.tsv","r");
-	FILE* f2 = fopen("./NL27K_with_neg/relation2id.tsv","r");
+	cout << "[INFO] symbol2id if start!" << endl;
+    FILE* f1 = fopen("./2-data_with_neg/entity2id.tsv","r");
+	FILE* f2 = fopen("./2-data_with_neg/relation2id.tsv","r");
 	int x;
 	//build entity2ID and ID2entity map
+	cout << "[INFO] symbol2id if start!";
 	while (fscanf(f1,"%d%s",&x,buf)==2)
 	{
 		string st=buf;
@@ -388,11 +395,12 @@ void prepare()
 		id2relation[x]=st;
 		relation_num++;
 	}
+	cout << "[INFO] symbol2id if done!";
 	// 读取训练集及其路径信息
-	FILE* f_kb = fopen("./NL27K_with_neg/pos_with_neg_pra.txt","r");
+	FILE* f_kb = fopen("./2-data_with_neg/pos_with_neg_pra.txt","r");
 	bool neg_triple = false;
-	// cout << "fb_h size (-1) = " << train.fb_h.size() << endl;
-	// cout << "pra size(-1) = " << train.ok.size() << endl;
+	cout << "fb_h size (-1) = " << train.fb_h.size() << endl;
+	cout << "pra size(-1) = " << train.ok.size() << endl;
 	int cnt = 0;
 	while (fscanf(f_kb,"%s",buf)==1)
     {
@@ -448,7 +456,7 @@ void prepare()
 	// cout << cnt << endl;
 	//read prior path confidence
 	double y;
-	f_kb = fopen("./NL27K_with_neg/pos_with_neg_PP_conf.txt","r");
+	f_kb = fopen("./2-data_with_neg/pos_with_neg_PP_conf.txt","r");
 	while (fscanf(f_kb,"%lf",&y)==1)
 	{
 		hard_confidence.push_back(y);
@@ -507,6 +515,7 @@ int main(int argc,char**argv)
     cout<<"learing rate = "<<rate<<endl;
     cout<<"margin = "<<margin<<endl;
     cout <<"method = "<<version<<endl;
+	cout << "[INFO] data load start" << endl;
     prepare();
 	cout << "[INFO] data load finished" << endl;
     train.run(n,rate,margin,method);
